@@ -1,30 +1,48 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:wardrobe_plus/main.dart';
+import 'package:wardrobe_plus/app.dart';
+import 'package:wardrobe_plus/features/wardrobe/presentation/screens/home_screen.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('App opens the wardrobe placeholder through its home route', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const WardrobeApp());
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.text('Wardrobe+'), findsOneWidget);
+    expect(find.text('Your wardrobe starts here'), findsOneWidget);
+    expect(
+      find.text(
+        'Wardrobe browsing, outfit recommendations, and Smart Quick Swap '
+        'are coming soon.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(FloatingActionButton), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  testWidgets('Home supports a small screen and large text', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 480);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    await tester.pumpWidget(const WardrobeApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Your wardrobe starts here'), findsOneWidget);
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(0, -300),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
   });
 }
