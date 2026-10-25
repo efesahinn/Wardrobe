@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../../features/wardrobe/presentation/screens/home_screen.dart';
+import '../../features/favorites/presentation/screens/favorites_screen.dart';
+import '../../features/wear_history/presentation/screens/wear_history_screen.dart';
+import 'app_shell.dart';
+import 'route_paths.dart';
 
-const homeRoute = '/';
+export 'route_paths.dart';
 
 final Map<String, WidgetBuilder> appRoutes = {
-  homeRoute: (context) => const HomeScreen(),
+  homeRoute: (context) => const AppShell(),
+  favoritesRoute: (context) => const FavoritesScreen(),
+  wearHistoryRoute: (context) => const WearHistoryScreen(),
 };
