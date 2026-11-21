@@ -122,6 +122,13 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Color: White').hitTestable(), findsOneWidget);
       expect(find.text('Season: All seasons').hitTestable(), findsOneWidget);
+      expect(find.text('Size: Not specified'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Edit clothing'),
+        160,
+        scrollable: scrollable,
+      );
+      await tester.pumpAndSettle();
       expect(find.text('Edit clothing').hitTestable(), findsOneWidget);
       expect(find.text('Delete clothing').hitTestable(), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -227,6 +234,9 @@ void main() {
     expect(find.text('Remove image'), findsOneWidget);
     await enter(tester, 'Name', 'Blue linen shirt');
     await choose(tester, 'Category', 'Tops');
+    await enter(tester, 'Subcategory (optional)', 'Linen shirt');
+    await enter(tester, 'Style (optional)', 'Smart casual');
+    await choose(tester, 'Size (optional)', 'M');
     await enter(tester, 'Color', 'Blue');
     await choose(tester, 'Season', 'Summer');
     await tapText(tester, 'Save clothing');
@@ -235,6 +245,9 @@ void main() {
     await tapText(tester, 'Blue linen shirt');
     expect(find.text('Clothing details'), findsOneWidget);
     expect(find.text('Category: Tops'), findsOneWidget);
+    expect(find.text('Subcategory: Linen shirt'), findsOneWidget);
+    expect(find.text('Style: Smart casual'), findsOneWidget);
+    expect(find.text('Size: M'), findsOneWidget);
     expect(find.text('Color: Blue'), findsOneWidget);
     expect(find.text('Season: Summer'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -249,20 +262,32 @@ void main() {
         category: ClothingCategory.tops,
         color: 'White',
         season: ClothingSeason.spring,
+        size: 'S',
+        subcategory: 'T-shirt',
+        style: 'Casual',
         imageReference: '/missing.jpg',
       );
       await start(tester, repo);
       await tapText(tester, 'Old shirt');
       await tapText(tester, 'Edit clothing');
       expect(find.widgetWithText(TextFormField, 'Old shirt'), findsOneWidget);
+      expect(find.widgetWithText(TextFormField, 'T-shirt'), findsOneWidget);
+      expect(find.widgetWithText(TextFormField, 'Casual'), findsOneWidget);
+      expect(find.text('S'), findsOneWidget);
       await tapText(tester, 'Remove image');
       await enter(tester, 'Name', 'Updated jacket');
       await choose(tester, 'Category', 'Outerwear');
+      await enter(tester, 'Subcategory (optional)', 'Rain jacket');
+      await enter(tester, 'Style (optional)', 'Outdoor');
+      await enter(tester, 'Size (optional)', 'Regular');
       await enter(tester, 'Color', 'Olive');
       await choose(tester, 'Season', 'Winter');
       await tapText(tester, 'Save clothing');
       expect(find.text('Updated jacket'), findsOneWidget);
       expect(find.text('Category: Outerwear'), findsOneWidget);
+      expect(find.text('Subcategory: Rain jacket'), findsOneWidget);
+      expect(find.text('Style: Outdoor'), findsOneWidget);
+      expect(find.text('Size: Regular'), findsOneWidget);
       expect(find.text('Color: Olive'), findsOneWidget);
       expect(find.text('Season: Winter'), findsOneWidget);
       expect((await repo.getById(original.id))!.imageReference, isNull);
@@ -272,6 +297,30 @@ void main() {
       expect(find.text('Old shirt'), findsNothing);
     },
   );
+
+  testWidgets('Bottom size validation accepts numeric and W/L formats', (
+    tester,
+  ) async {
+    final repo = InMemoryWardrobeRepository();
+    await start(tester, repo);
+    await tapText(tester, 'Add clothing');
+    await enter(tester, 'Name', 'Black trousers');
+    await choose(tester, 'Category', 'Bottoms');
+    await enter(tester, 'Size (optional)', 'Medium');
+    await enter(tester, 'Color', 'Black');
+    await choose(tester, 'Season', 'All seasons');
+    await tapText(tester, 'Save clothing');
+    expect(
+      find.text('Use a number or W/L size, such as 32 or W32/L34.'),
+      findsOneWidget,
+    );
+    expect(await repo.getAll(), isEmpty);
+
+    await enter(tester, 'Size (optional)', 'W32/L34');
+    await tapText(tester, 'Save clothing');
+    expect((await repo.getAll()).single.size, 'W32/L34');
+    expect(find.text('Black trousers'), findsOneWidget);
+  });
 
   testWidgets('Delete requires confirmation and refreshes the empty list', (
     tester,

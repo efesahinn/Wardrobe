@@ -1,4 +1,5 @@
 import '../domain/clothing_item.dart';
+import '../domain/clothing_metadata.dart';
 import '../domain/wardrobe_repository.dart';
 
 class InMemoryWardrobeRepository implements WardrobeRepository {
@@ -41,11 +42,26 @@ class InMemoryWardrobeRepository implements WardrobeRepository {
   int _nextId = 0;
 
   ClothingItem _validated(ClothingItem item) {
+    final sizeError = ClothingMetadataRules.validateSize(
+      item.category,
+      item.size,
+    );
+    final subcategoryError = ClothingMetadataRules.validateOptionalText(
+      item.subcategory,
+      'Subcategory',
+    );
+    final styleError = ClothingMetadataRules.validateOptionalText(
+      item.style,
+      'Style',
+    );
     if (item.id.trim().isEmpty ||
         item.name.trim().isEmpty ||
         item.name.trim().length > 80 ||
         item.color.trim().isEmpty ||
-        item.color.trim().length > 40) {
+        item.color.trim().length > 40 ||
+        sizeError != null ||
+        subcategoryError != null ||
+        styleError != null) {
       throw ArgumentError('A valid ID, name, and color are required.');
     }
     return ClothingItem(
@@ -54,6 +70,11 @@ class InMemoryWardrobeRepository implements WardrobeRepository {
       category: item.category,
       color: item.color.trim(),
       season: item.season,
+      size: ClothingMetadataRules.normalizedSize(item.category, item.size),
+      subcategory: ClothingMetadataRules.normalizedOptionalText(
+        item.subcategory,
+      ),
+      style: ClothingMetadataRules.normalizedOptionalText(item.style),
       imageReference: item.imageReference,
     );
   }
@@ -70,6 +91,9 @@ class InMemoryWardrobeRepository implements WardrobeRepository {
     required ClothingCategory category,
     required String color,
     required ClothingSeason season,
+    String? size,
+    String? subcategory,
+    String? style,
     String? imageReference,
   }) async {
     String id;
@@ -83,6 +107,9 @@ class InMemoryWardrobeRepository implements WardrobeRepository {
         category: category,
         color: color,
         season: season,
+        size: size,
+        subcategory: subcategory,
+        style: style,
         imageReference: imageReference,
       ),
     );

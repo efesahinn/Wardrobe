@@ -9,6 +9,9 @@ abstract interface class WardrobeRepository {
     required ClothingCategory category,
     required String color,
     required ClothingSeason season,
+    String? size,
+    String? subcategory,
+    String? style,
     String? imageReference,
   });
   Future<void> update(ClothingItem item);
