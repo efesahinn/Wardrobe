@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wardrobe_plus/core/theme/app_theme.dart';
+import 'package:wardrobe_plus/features/wardrobe/data/development_clothing_analysis_service.dart';
 import 'package:wardrobe_plus/features/wardrobe/data/in_memory_wardrobe_repository.dart';
 import 'package:wardrobe_plus/features/wardrobe/data/local_image_quality_service.dart';
+import 'package:wardrobe_plus/features/wardrobe/domain/clothing_analysis_service.dart';
 import 'package:wardrobe_plus/features/wardrobe/domain/clothing_item.dart';
 import 'package:wardrobe_plus/features/wardrobe/presentation/screens/clothing_detail_screen.dart';
 import 'package:wardrobe_plus/features/wardrobe/presentation/screens/clothing_form_screen.dart';
@@ -83,6 +85,13 @@ void main() {
               : ClothingFormScreen(
                   repository: repository,
                   item: screen == 'Edit' ? item : null,
+                  analysisService: const DevelopmentClothingAnalysisService(
+                    suggestion: ClothingAnalysisSuggestion(
+                      category: ClothingCategory.tops,
+                      color: 'Blue',
+                      season: ClothingSeason.summer,
+                    ),
+                  ),
                   pickImage: () async => file.path,
                   checkImageQuality: (_) async => ImageQualityReport(
                     width: originalSize.width.toInt(),
@@ -103,6 +112,9 @@ void main() {
             await tester.tap(
               find.widgetWithText(OutlinedButton, 'Choose gallery image'),
             );
+            await tester.pumpAndSettle();
+            await tester.ensureVisible(find.text('Confirm metadata'));
+            await tester.tap(find.text('Confirm metadata'));
             await tester.pumpAndSettle();
           }
           final raw = find.descendant(

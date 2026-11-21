@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wardrobe_plus/core/theme/app_theme.dart';
 import 'package:wardrobe_plus/app.dart';
+import 'package:wardrobe_plus/features/wardrobe/data/development_clothing_analysis_service.dart';
 import 'package:wardrobe_plus/features/wardrobe/data/in_memory_wardrobe_repository.dart';
 import 'package:wardrobe_plus/features/wardrobe/data/local_image_quality_service.dart';
+import 'package:wardrobe_plus/features/wardrobe/domain/clothing_analysis_service.dart';
 import 'package:wardrobe_plus/features/wardrobe/domain/clothing_item.dart';
 import 'package:wardrobe_plus/features/wardrobe/presentation/gallery_image_picker.dart';
 import 'package:wardrobe_plus/features/wardrobe/presentation/screens/wardrobe_screen.dart';
@@ -36,6 +38,13 @@ Future<void> start(
             pickImage: picker ?? () async => null,
             checkImageQuality: (_) async =>
                 ImageQualityReport(width: 1200, height: 1200, issues: const []),
+            analysisService: const DevelopmentClothingAnalysisService(
+              suggestion: ClothingAnalysisSuggestion(
+                category: ClothingCategory.tops,
+                color: 'Blue',
+                season: ClothingSeason.summer,
+              ),
+            ),
           ),
         ),
       ),
@@ -262,6 +271,7 @@ void main() {
     );
     await tapText(tester, 'Add clothing');
     await tapText(tester, 'Choose gallery image');
+    await tapText(tester, 'Confirm metadata');
     expect(picks, 1);
     expect(find.text('Remove image'), findsOneWidget);
     await enter(tester, 'Name', 'Blue linen shirt');
