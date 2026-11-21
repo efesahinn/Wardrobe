@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'core/constants/app_constants.dart';
 import 'core/routing/app_routes.dart';
 import 'core/theme/app_theme.dart';
+import 'features/wardrobe/domain/wardrobe_repository.dart';
 
 class WardrobeApp extends StatelessWidget {
-  const WardrobeApp({super.key});
+  const WardrobeApp({super.key, this.wardrobeRepository});
+
+  final WardrobeRepository? wardrobeRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +17,7 @@ class WardrobeApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: appTheme,
       initialRoute: homeRoute,
-      routes: appRoutes,
+      routes: buildAppRoutes(wardrobeRepository: wardrobeRepository),
     );
   }
 }

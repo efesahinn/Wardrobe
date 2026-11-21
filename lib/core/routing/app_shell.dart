@@ -3,12 +3,15 @@ import 'package:flutter/material.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/outfit_recommendations/presentation/screens/outfits_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
-import '../../features/wardrobe/data/in_memory_wardrobe_repository.dart';
+import '../../features/wardrobe/data/sqlite_wardrobe_repository.dart';
+import '../../features/wardrobe/domain/wardrobe_repository.dart';
 import '../../features/wardrobe/presentation/screens/wardrobe_screen.dart';
 
 /// Owns top-level navigation; feature screens supply the tab content.
 class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+  const AppShell({super.key, this.wardrobeRepository});
+
+  final WardrobeRepository? wardrobeRepository;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -17,7 +20,8 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   static const _titles = ['Home', 'Wardrobe', 'Outfits', 'Profile'];
   int _selectedIndex = 0;
-  final _wardrobeRepository = InMemoryWardrobeRepository.seeded();
+  late final WardrobeRepository _wardrobeRepository =
+      widget.wardrobeRepository ?? SqliteWardrobeRepository();
 
   @override
   Widget build(BuildContext context) {
