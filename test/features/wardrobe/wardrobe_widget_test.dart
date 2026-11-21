@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wardrobe_plus/core/theme/app_theme.dart';
@@ -8,6 +10,16 @@ import 'package:wardrobe_plus/features/wardrobe/domain/clothing_item.dart';
 import 'package:wardrobe_plus/features/wardrobe/presentation/gallery_image_picker.dart';
 import 'package:wardrobe_plus/features/wardrobe/presentation/screens/wardrobe_screen.dart';
 import 'package:wardrobe_plus/features/wardrobe/presentation/screens/clothing_detail_screen.dart';
+
+class FailingWardrobeRepository extends InMemoryWardrobeRepository {
+  var loadAttempts = 0;
+
+  @override
+  Future<List<ClothingItem>> getAll() async {
+    loadAttempts++;
+    throw FileSystemException('Storage unavailable');
+  }
+}
 
 Future<void> start(
   WidgetTester tester,
@@ -92,6 +104,21 @@ void smallScreen(WidgetTester tester) {
 }
 
 void main() {
+  testWidgets('storage initialization failures show a retry state', (
+    tester,
+  ) async {
+    final repository = FailingWardrobeRepository();
+    await start(tester, repository);
+
+    expect(find.text('Could not load your wardrobe.'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+    expect(repository.loadAttempts, 1);
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(repository.loadAttempts, 2);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'Details swipes expose information and actions on a small screen',
     (tester) async {
@@ -161,7 +188,9 @@ void main() {
   testWidgets(
     'Wardrobe filter and data survive tab switches in the app shell',
     (tester) async {
-      await tester.pumpWidget(const WardrobeApp());
+      await tester.pumpWidget(
+        WardrobeApp(wardrobeRepository: InMemoryWardrobeRepository.seeded()),
+      );
       await tester.pumpAndSettle();
       Finder tab(String label) => find.descendant(
         of: find.byType(NavigationBar),

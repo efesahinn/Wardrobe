@@ -98,7 +98,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Development sample data. Changes reset when the app restarts.',
+                      'Your clothing is stored locally on this device.',
                     ),
                     const SizedBox(height: 12),
                     FilledButton.icon(
