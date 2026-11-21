@@ -6,19 +6,34 @@ void main() {
   Future<ClothingItem> add(
     InMemoryWardrobeRepository repo, {
     String name = ' Shirt ',
+    ClothingCategory category = ClothingCategory.tops,
+    String? size,
+    String? subcategory,
+    String? style,
   }) => repo.create(
     name: name,
-    category: ClothingCategory.tops,
+    category: category,
     color: ' White ',
     season: ClothingSeason.summer,
+    size: size,
+    subcategory: subcategory,
+    style: style,
   );
 
   test('Create trims metadata and generates unique stable IDs', () async {
     final repo = InMemoryWardrobeRepository();
-    final first = await add(repo);
+    final first = await add(
+      repo,
+      size: ' m ',
+      subcategory: ' T-shirt ',
+      style: ' Casual ',
+    );
     final second = await add(repo);
     expect(first.name, 'Shirt');
     expect(first.color, 'White');
+    expect(first.size, 'M');
+    expect(first.subcategory, 'T-shirt');
+    expect(first.style, 'Casual');
     expect(first.id, isNot(second.id));
     expect(await repo.getById(first.id), same(first));
     expect(await repo.getById('unknown'), isNull);
@@ -43,6 +58,9 @@ void main() {
           category: ClothingCategory.tops,
           color: 'Blue',
           season: ClothingSeason.summer,
+          size: 'L',
+          subcategory: 'Linen shirt',
+          style: 'Smart casual',
         ),
       );
       final updated = (await repo.getById(item.id))!;
@@ -51,6 +69,9 @@ void main() {
       expect(updated.category, ClothingCategory.tops);
       expect(updated.color, 'Blue');
       expect(updated.season, ClothingSeason.summer);
+      expect(updated.size, 'L');
+      expect(updated.subcategory, 'Linen shirt');
+      expect(updated.style, 'Smart casual');
       expect(updated.imageReference, isNull);
       expect((await repo.getAll()).length, 1);
     },
@@ -90,6 +111,62 @@ void main() {
       throwsArgumentError,
     );
   });
+
+  test(
+    'Existing records remain compatible without optional metadata',
+    () async {
+      const legacy = ClothingItem(
+        id: 'legacy-1',
+        name: 'Legacy coat',
+        category: ClothingCategory.outerwear,
+        color: 'Black',
+        season: ClothingSeason.winter,
+      );
+      final repo = InMemoryWardrobeRepository(initialItems: const [legacy]);
+      final stored = (await repo.getAll()).single;
+      expect(stored.size, isNull);
+      expect(stored.subcategory, isNull);
+      expect(stored.style, isNull);
+    },
+  );
+
+  test(
+    'Category size rules accept valid formats and reject invalid ones',
+    () async {
+      final repo = InMemoryWardrobeRepository();
+      expect((await add(repo, size: 'XXL')).size, 'XXL');
+      expect(
+        (await add(
+          repo,
+          category: ClothingCategory.bottoms,
+          size: ' w32 / l34 ',
+        )).size,
+        'W32/L34',
+      );
+      expect(
+        (await add(repo, category: ClothingCategory.shoes, size: '42.5')).size,
+        '42.5',
+      );
+      expect(
+        (await add(
+          repo,
+          category: ClothingCategory.accessories,
+          size: 'One size',
+        )).size,
+        'One size',
+      );
+
+      await expectLater(add(repo, size: '32'), throwsArgumentError);
+      await expectLater(
+        add(repo, category: ClothingCategory.bottoms, size: 'Medium'),
+        throwsArgumentError,
+      );
+      await expectLater(
+        add(repo, category: ClothingCategory.shoes, size: 'EU 42'),
+        throwsArgumentError,
+      );
+    },
+  );
 
   test(
     'Snapshots cannot mutate storage and do not change after later writes',

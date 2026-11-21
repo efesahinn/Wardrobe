@@ -29,6 +29,9 @@ class ClothingItem {
     required this.category,
     required this.color,
     required this.season,
+    this.size,
+    this.subcategory,
+    this.style,
     this.imageReference,
   });
 
@@ -37,6 +40,9 @@ class ClothingItem {
   final ClothingCategory category;
   final String color;
   final ClothingSeason season;
+  final String? size;
+  final String? subcategory;
+  final String? style;
   final String? imageReference;
 }
 

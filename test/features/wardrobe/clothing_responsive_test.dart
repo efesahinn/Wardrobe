@@ -16,18 +16,34 @@ void viewport(WidgetTester tester, Size size, double scale) {
 }
 
 Future<void> reveal(WidgetTester tester, Finder finder) async {
+  if (finder.hitTestable().evaluate().isEmpty) {
+    final formScroll = find.descendant(
+      of: find.byType(ClothingFormScreen),
+      matching: find.byType(Scrollable),
+    );
+    await tester.scrollUntilVisible(
+      finder,
+      160,
+      scrollable: formScroll.evaluate().isEmpty
+          ? find.byType(Scrollable).first
+          : formScroll.first,
+    );
+  }
   await tester.ensureVisible(finder);
   await tester.pumpAndSettle();
   expect(finder.hitTestable(), findsOneWidget);
 }
 
-Finder input(String label) => label == 'Name' || label == 'Color'
-    ? find.widgetWithText(TextFormField, label)
-    : find.byWidgetPredicate(
-        (widget) =>
-            widget is DropdownButtonFormField &&
-            widget.decoration.labelText == label,
-      );
+Finder input(String label) {
+  final textField = find.widgetWithText(TextFormField, label);
+  if (textField.evaluate().isNotEmpty) return textField;
+  return find.byWidgetPredicate(
+    (widget) =>
+        widget is DropdownButtonFormField &&
+        widget.decoration.labelText == label,
+  );
+}
+
 void main() {
   for (final config in [
     (size: const Size(412, 1000), scale: 1.0),
@@ -72,6 +88,9 @@ void main() {
       }
       for (final text in [
         'Category: Tops',
+        'Subcategory: Not specified',
+        'Style: Not specified',
+        'Size: Not specified',
         'Color: White',
         'Season: All seasons',
         'Edit clothing',
@@ -114,6 +133,9 @@ void main() {
             'Choose gallery image',
             'Name',
             'Category',
+            'Subcategory (optional)',
+            'Style (optional)',
+            'Size (optional)',
             'Color',
             'Season',
           ]) {
@@ -130,10 +152,10 @@ void main() {
             final position = tester
                 .state<ScrollableState>(find.byType(Scrollable).first)
                 .position;
-            expect(position.maxScrollExtent, 0);
+            expect(position.maxScrollExtent, greaterThan(0));
             expect(
               tester.getBottomRight(save).dy,
-              closeTo(config.size.height - 24 - 16, 1),
+              lessThanOrEqualTo(config.size.height - 24 - 16),
             );
           }
           if (!editing) {
@@ -199,7 +221,17 @@ void main() {
           }
         }
         final color = find.widgetWithText(TextFormField, 'Color');
-        await reveal(tester, color);
+        final formScroll = find.descendant(
+          of: find.byType(ClothingFormScreen),
+          matching: find.byType(Scrollable),
+        );
+        await tester.scrollUntilVisible(
+          color,
+          240,
+          scrollable: formScroll.first,
+        );
+        await tester.ensureVisible(color);
+        await tester.pumpAndSettle();
         await tester.showKeyboard(color);
         tester.view.viewInsets = const FakeViewPadding(bottom: 240);
         tester.view.padding = const FakeViewPadding(top: 24);

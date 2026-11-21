@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/clothing_item.dart';
+import '../../domain/clothing_metadata.dart';
 import '../../domain/wardrobe_repository.dart';
 import '../gallery_image_picker.dart';
 import '../widgets/clothing_image.dart';
@@ -25,6 +26,9 @@ class _ClothingFormScreenState extends State<ClothingFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _name;
   late final TextEditingController _color;
+  late final TextEditingController _size;
+  late final TextEditingController _subcategory;
+  late final TextEditingController _style;
   ClothingCategory? _category;
   ClothingSeason? _season;
   String? _image;
@@ -38,6 +42,9 @@ class _ClothingFormScreenState extends State<ClothingFormScreen> {
     final item = widget.item;
     _name = TextEditingController(text: item?.name);
     _color = TextEditingController(text: item?.color);
+    _size = TextEditingController(text: item?.size);
+    _subcategory = TextEditingController(text: item?.subcategory);
+    _style = TextEditingController(text: item?.style);
     _category = item?.category;
     _season = item?.season;
     _image = item?.imageReference;
@@ -47,7 +54,71 @@ class _ClothingFormScreenState extends State<ClothingFormScreen> {
   void dispose() {
     _name.dispose();
     _color.dispose();
+    _size.dispose();
+    _subcategory.dispose();
+    _style.dispose();
     super.dispose();
+  }
+
+  void _setCategory(ClothingCategory? category) {
+    if (category != null &&
+        ClothingMetadataRules.validateSize(category, _size.text) != null) {
+      _size.clear();
+    }
+    setState(() => _category = category);
+  }
+
+  Widget _buildSizeField(bool busy) {
+    final category = _category;
+    if (category?.sizeInputType == ClothingSizeInputType.alpha) {
+      final normalized = ClothingMetadataRules.normalizedSize(
+        category!,
+        _size.text,
+      );
+      final selected = ClothingMetadataRules.topSizes.contains(normalized)
+          ? normalized!
+          : '';
+      return DropdownButtonFormField<String>(
+        key: ValueKey('size-${category.name}'),
+        initialValue: selected,
+        isExpanded: true,
+        decoration: const InputDecoration(labelText: 'Size (optional)'),
+        items: [
+          const DropdownMenuItem(value: '', child: Text('Not specified')),
+          for (final size in ClothingMetadataRules.topSizes)
+            DropdownMenuItem(value: size, child: Text(size)),
+        ],
+        onChanged: busy
+            ? null
+            : (value) => setState(() => _size.text = value ?? ''),
+        validator: (value) =>
+            ClothingMetadataRules.validateSize(category, value),
+      );
+    }
+
+    final (hint, keyboardType) = switch (category?.sizeInputType) {
+      ClothingSizeInputType.bottoms => (
+        'Examples: 32 or W32/L34',
+        TextInputType.text,
+      ),
+      ClothingSizeInputType.euShoes => (
+        'EU size, for example 42 or 42.5',
+        const TextInputType.numberWithOptions(decimal: true),
+      ),
+      _ => ('Enter a size if applicable', TextInputType.text),
+    };
+    return TextFormField(
+      key: ValueKey('size-${category?.name ?? 'none'}'),
+      controller: _size,
+      enabled: !busy,
+      maxLength: ClothingMetadataRules.maxSizeLength,
+      keyboardType: keyboardType,
+      textInputAction: TextInputAction.next,
+      decoration: InputDecoration(labelText: 'Size (optional)', hintText: hint),
+      validator: (value) => category == null
+          ? null
+          : ClothingMetadataRules.validateSize(category, value),
+    );
   }
 
   Future<void> _selectImage() async {
@@ -85,18 +156,27 @@ class _ClothingFormScreenState extends State<ClothingFormScreen> {
           category: _category!,
           color: _color.text.trim(),
           season: _season!,
+          size: _size.text,
+          subcategory: _subcategory.text,
+          style: _style.text,
           imageReference: _image,
         );
       } else {
-        saved = ClothingItem(
+        final updated = ClothingItem(
           id: existing.id,
           name: _name.text.trim(),
           category: _category!,
           color: _color.text.trim(),
           season: _season!,
+          size: _size.text,
+          subcategory: _subcategory.text,
+          style: _style.text,
           imageReference: _image,
         );
-        await widget.repository.update(saved);
+        await widget.repository.update(updated);
+        saved =
+            await widget.repository.getById(existing.id) ??
+            (throw StateError('Updated clothing item not found.'));
       }
       if (mounted) Navigator.of(context).pop(saved);
     } catch (_) {
@@ -174,16 +254,50 @@ class _ClothingFormScreenState extends State<ClothingFormScreen> {
                         child: Text(category.label),
                       ),
                   ],
-                  onChanged: busy
-                      ? null
-                      : (value) => setState(() => _category = value),
+                  onChanged: busy ? null : _setCategory,
                   validator: (value) =>
                       value == null ? 'Choose a category.' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
+                  controller: _subcategory,
+                  enabled: !busy,
+                  maxLength: ClothingMetadataRules.maxOptionalTextLength,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Subcategory (optional)',
+                    hintText: 'For example, T-shirt or chinos',
+                  ),
+                  textCapitalization: TextCapitalization.words,
+                  validator: (value) =>
+                      ClothingMetadataRules.validateOptionalText(
+                        value,
+                        'Subcategory',
+                      ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _style,
+                  enabled: !busy,
+                  maxLength: ClothingMetadataRules.maxOptionalTextLength,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Style (optional)',
+                    hintText: 'For example, Casual or Business',
+                  ),
+                  textCapitalization: TextCapitalization.words,
+                  validator: (value) =>
+                      ClothingMetadataRules.validateOptionalText(
+                        value,
+                        'Style',
+                      ),
+                ),
+                const SizedBox(height: 16),
+                _buildSizeField(busy),
+                const SizedBox(height: 16),
+                TextFormField(
                   controller: _color,
-                  textInputAction: TextInputAction.done,
+                  textInputAction: TextInputAction.next,
                   enabled: !busy,
                   maxLength: 40,
                   decoration: const InputDecoration(labelText: 'Color'),

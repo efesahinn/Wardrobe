@@ -26,6 +26,9 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
   late ClothingItem _item = widget.item;
   bool _deleting = false;
 
+  String _metadataValue(String? value) =>
+      value == null || value.trim().isEmpty ? 'Not specified' : value;
+
   Future<void> _edit() async {
     final updated = await Navigator.of(context).push<ClothingItem>(
       MaterialPageRoute(
@@ -104,6 +107,9 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
             ),
             const SizedBox(height: 16),
             Text('Category: ${_item.category.label}'),
+            Text('Subcategory: ${_metadataValue(_item.subcategory)}'),
+            Text('Style: ${_metadataValue(_item.style)}'),
+            Text('Size: ${_metadataValue(_item.size)}'),
             Text('Color: ${_item.color}'),
             Text('Season: ${_item.season.label}'),
           ],
