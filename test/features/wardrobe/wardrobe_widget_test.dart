@@ -254,7 +254,7 @@ void main() {
   });
 
   testWidgets(
-    'Edit prefilled metadata, remove image, and refresh detail and list',
+    'Edit displays repository-normalized metadata and refreshes detail',
     (tester) async {
       final repo = InMemoryWardrobeRepository();
       final original = await repo.create(
@@ -277,9 +277,9 @@ void main() {
       await tapText(tester, 'Remove image');
       await enter(tester, 'Name', 'Updated jacket');
       await choose(tester, 'Category', 'Outerwear');
-      await enter(tester, 'Subcategory (optional)', 'Rain jacket');
-      await enter(tester, 'Style (optional)', 'Outdoor');
-      await enter(tester, 'Size (optional)', 'Regular');
+      await enter(tester, 'Subcategory (optional)', '  Rain jacket  ');
+      await enter(tester, 'Style (optional)', '  Outdoor  ');
+      await enter(tester, 'Size (optional)', '  Regular  ');
       await enter(tester, 'Color', 'Olive');
       await choose(tester, 'Season', 'Winter');
       await tapText(tester, 'Save clothing');
@@ -290,7 +290,11 @@ void main() {
       expect(find.text('Size: Regular'), findsOneWidget);
       expect(find.text('Color: Olive'), findsOneWidget);
       expect(find.text('Season: Winter'), findsOneWidget);
-      expect((await repo.getById(original.id))!.imageReference, isNull);
+      final stored = (await repo.getById(original.id))!;
+      expect(stored.subcategory, 'Rain jacket');
+      expect(stored.style, 'Outdoor');
+      expect(stored.size, 'Regular');
+      expect(stored.imageReference, isNull);
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.text('Updated jacket'), findsOneWidget);

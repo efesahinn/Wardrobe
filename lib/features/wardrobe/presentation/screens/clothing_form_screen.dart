@@ -162,7 +162,7 @@ class _ClothingFormScreenState extends State<ClothingFormScreen> {
           imageReference: _image,
         );
       } else {
-        saved = ClothingItem(
+        final updated = ClothingItem(
           id: existing.id,
           name: _name.text.trim(),
           category: _category!,
@@ -173,7 +173,10 @@ class _ClothingFormScreenState extends State<ClothingFormScreen> {
           style: _style.text,
           imageReference: _image,
         );
-        await widget.repository.update(saved);
+        await widget.repository.update(updated);
+        saved =
+            await widget.repository.getById(existing.id) ??
+            (throw StateError('Updated clothing item not found.'));
       }
       if (mounted) Navigator.of(context).pop(saved);
     } catch (_) {
