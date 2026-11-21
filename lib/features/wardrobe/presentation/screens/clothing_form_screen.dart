@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../data/local_image_quality_service.dart';
+import '../../domain/clothing_analysis_service.dart';
 import '../../domain/clothing_item.dart';
 import '../../domain/clothing_metadata.dart';
 import '../../domain/wardrobe_repository.dart';
 import '../gallery_image_picker.dart';
 import '../widgets/clothing_image.dart';
 import '../widgets/clothing_page_layout.dart';
+import 'clothing_metadata_review_screen.dart';
 
 enum _PhotoQualityChoice { retry, useAnyway, cancel }
 
@@ -18,12 +20,14 @@ class ClothingFormScreen extends StatefulWidget {
     this.pickImage = pickGalleryImage,
     this.takePhoto = takeCameraPhoto,
     this.checkImageQuality = checkLocalImageQuality,
+    this.analysisService = const UnavailableClothingAnalysisService(),
   });
   final WardrobeRepository repository;
   final ClothingItem? item;
   final PickClothingImage pickImage;
   final PickClothingImage takePhoto;
   final CheckClothingImageQuality checkImageQuality;
+  final ClothingAnalysisService analysisService;
 
   @override
   State<ClothingFormScreen> createState() => _ClothingFormScreenState();
@@ -190,19 +194,16 @@ class _ClothingFormScreenState extends State<ClothingFormScreen> {
         try {
           report = await widget.checkImageQuality(path);
         } catch (_) {
-          setState(() {
-            _image = path;
-            _imageQualityWarnings = const [];
-            _error =
-                'Photo selected, but its quality could not be checked locally.';
-          });
+          final confirmed = await _reviewPhoto(path, const []);
+          if (confirmed && mounted) {
+            setState(
+              () => _error = 'Photo selected, but its quality could not be checked locally.',
+            );
+          }
           return;
         }
         if (!report.hasWarnings) {
-          setState(() {
-            _image = path;
-            _imageQualityWarnings = const [];
-          });
+          await _reviewPhoto(path, const []);
           return;
         }
 
@@ -212,10 +213,7 @@ class _ClothingFormScreenState extends State<ClothingFormScreen> {
         );
         if (!mounted || choice == _PhotoQualityChoice.cancel) return;
         if (choice == _PhotoQualityChoice.retry) continue;
-        setState(() {
-          _image = path;
-          _imageQualityWarnings = report.issues;
-        });
+        await _reviewPhoto(path, report.issues);
         return;
       }
     } catch (_) {
@@ -229,6 +227,52 @@ class _ClothingFormScreenState extends State<ClothingFormScreen> {
     } finally {
       if (mounted) setState(() => _picking = false);
     }
+  }
+
+  Future<bool> _reviewPhoto(
+    String path,
+    List<ImageQualityIssue> qualityWarnings,
+  ) async {
+    ClothingAnalysisSuggestion? suggestion;
+    var analysisUnavailable = false;
+    try {
+      suggestion = await widget.analysisService.analyze(path);
+      analysisUnavailable = suggestion == null;
+    } catch (_) {
+      analysisUnavailable = true;
+    }
+    if (!mounted) return false;
+    final confirmed = await Navigator.of(context)
+        .push<ConfirmedClothingMetadata>(
+          MaterialPageRoute(
+            builder: (_) => ClothingMetadataReviewScreen(
+              imagePath: path,
+              suggestion: suggestion,
+              analysisUnavailable: analysisUnavailable,
+              developmentStub: widget.analysisService.isDevelopmentStub,
+              currentCategory: _category,
+              currentSubcategory: _subcategory.text,
+              currentColor: _color.text,
+              currentStyle: _style.text,
+              currentSeason: _season,
+            ),
+          ),
+        );
+    if (!mounted || confirmed == null) return false;
+    if (ClothingMetadataRules.validateSize(confirmed.category, _size.text) !=
+        null) {
+      _size.clear();
+    }
+    setState(() {
+      _image = path;
+      _imageQualityWarnings = qualityWarnings;
+      _category = confirmed.category;
+      _subcategory.text = confirmed.subcategory ?? '';
+      _color.text = confirmed.color;
+      _style.text = confirmed.style ?? '';
+      _season = confirmed.season;
+    });
+    return true;
   }
 
   Future<void> _save() async {

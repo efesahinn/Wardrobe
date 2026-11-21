@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wardrobe_plus/features/wardrobe/data/development_clothing_analysis_service.dart';
 import 'package:wardrobe_plus/features/wardrobe/data/in_memory_wardrobe_repository.dart';
 import 'package:wardrobe_plus/features/wardrobe/data/local_image_quality_service.dart';
+import 'package:wardrobe_plus/features/wardrobe/domain/clothing_analysis_service.dart';
+import 'package:wardrobe_plus/features/wardrobe/domain/clothing_item.dart';
 import 'package:wardrobe_plus/features/wardrobe/presentation/screens/clothing_form_screen.dart';
 
 Future<void> choose(WidgetTester tester, String label, String option) async {
@@ -25,6 +28,14 @@ Future<void> enter(WidgetTester tester, String label, String value) async {
 }
 
 void main() {
+  const analysisService = DevelopmentClothingAnalysisService(
+    suggestion: ClothingAnalysisSuggestion(
+      category: ClothingCategory.tops,
+      color: 'Black',
+      season: ClothingSeason.allSeasons,
+    ),
+  );
+
   testWidgets('warns about gallery quality and allows using photo anyway', (
     tester,
   ) async {
@@ -33,6 +44,7 @@ void main() {
       MaterialApp(
         home: ClothingFormScreen(
           repository: repository,
+          analysisService: analysisService,
           pickImage: () async => '/warning.jpg',
           checkImageQuality: (_) async => ImageQualityReport(
             width: 800,
@@ -58,6 +70,9 @@ void main() {
 
     await tester.tap(find.text('Use anyway'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Confirm metadata'));
+    await tester.tap(find.text('Confirm metadata'));
+    await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('photo-quality-warning')), findsOneWidget);
     expect(find.text('Remove image'), findsOneWidget);
 
@@ -80,6 +95,7 @@ void main() {
       MaterialApp(
         home: ClothingFormScreen(
           repository: InMemoryWardrobeRepository(),
+          analysisService: analysisService,
           takePhoto: () async =>
               cameraCalls++ == 0 ? '/low-resolution.jpg' : '/good.jpg',
           checkImageQuality: (path) async => ImageQualityReport(
@@ -97,6 +113,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Retake'), findsOneWidget);
     await tester.tap(find.text('Retake'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Confirm metadata'));
+    await tester.tap(find.text('Confirm metadata'));
     await tester.pumpAndSettle();
 
     expect(cameraCalls, 2);
