@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wardrobe_plus/core/theme/app_theme.dart';
 import 'package:wardrobe_plus/app.dart';
 import 'package:wardrobe_plus/features/wardrobe/data/in_memory_wardrobe_repository.dart';
+import 'package:wardrobe_plus/features/wardrobe/data/local_image_quality_service.dart';
 import 'package:wardrobe_plus/features/wardrobe/domain/clothing_item.dart';
 import 'package:wardrobe_plus/features/wardrobe/presentation/gallery_image_picker.dart';
 import 'package:wardrobe_plus/features/wardrobe/presentation/screens/wardrobe_screen.dart';
@@ -21,6 +22,8 @@ Future<void> start(
           child: WardrobeScreen(
             repository: repository,
             pickImage: picker ?? () async => null,
+            checkImageQuality: (_) async =>
+                ImageQualityReport(width: 1200, height: 1200, issues: const []),
           ),
         ),
       ),

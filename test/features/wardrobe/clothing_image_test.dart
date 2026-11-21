@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wardrobe_plus/core/theme/app_theme.dart';
 import 'package:wardrobe_plus/features/wardrobe/data/in_memory_wardrobe_repository.dart';
+import 'package:wardrobe_plus/features/wardrobe/data/local_image_quality_service.dart';
 import 'package:wardrobe_plus/features/wardrobe/domain/clothing_item.dart';
 import 'package:wardrobe_plus/features/wardrobe/presentation/screens/clothing_detail_screen.dart';
 import 'package:wardrobe_plus/features/wardrobe/presentation/screens/clothing_form_screen.dart';
@@ -83,6 +84,11 @@ void main() {
                   repository: repository,
                   item: screen == 'Edit' ? item : null,
                   pickImage: () async => file.path,
+                  checkImageQuality: (_) async => ImageQualityReport(
+                    width: originalSize.width.toInt(),
+                    height: originalSize.height.toInt(),
+                    issues: const [],
+                  ),
                 );
           await tester.pumpWidget(MaterialApp(theme: appTheme, home: page));
           await tester.pumpAndSettle();

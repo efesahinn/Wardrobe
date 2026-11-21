@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/local_image_quality_service.dart';
 import '../../domain/clothing_item.dart';
 import '../../domain/wardrobe_repository.dart';
 import '../gallery_image_picker.dart';
@@ -13,10 +14,12 @@ class ClothingDetailScreen extends StatefulWidget {
     required this.item,
     required this.repository,
     this.pickImage = pickGalleryImage,
+    this.checkImageQuality = checkLocalImageQuality,
   });
   final ClothingItem item;
   final WardrobeRepository repository;
   final PickClothingImage pickImage;
+  final CheckClothingImageQuality checkImageQuality;
 
   @override
   State<ClothingDetailScreen> createState() => _ClothingDetailScreenState();
@@ -36,6 +39,7 @@ class _ClothingDetailScreenState extends State<ClothingDetailScreen> {
           repository: widget.repository,
           item: _item,
           pickImage: widget.pickImage,
+          checkImageQuality: widget.checkImageQuality,
         ),
       ),
     );
