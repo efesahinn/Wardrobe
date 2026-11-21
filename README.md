@@ -31,4 +31,21 @@ See the full [Project Proposal](docs/PROJECT_PROPOSAL.md) for requirements, user
 - **Confirmed:** Flutter and Dart mobile client
 - **Proposed / subject to evaluation:** Firebase Authentication, Cloud Firestore, Cloud Storage, an external or hosted AI service, and a weather API
 
-> Project status: proposal and planning. Features described here have not yet been presented as implemented.
+> Project status: early development. The navigation shell and Phase 1 in-memory Digital Wardrobe are implemented; other proposal capabilities remain planned.
+
+## Digital Wardrobe development status
+
+The Wardrobe tab supports sample clothing, category filtering, gallery images,
+manual add/edit forms, details, and deletion with confirmation. Changes exist
+only in memory and reset to three sample items when the app restarts. Images
+remain local and are not uploaded. Other tabs remain placeholders.
+
+Run from the project root with Flutter installed:
+
+```sh
+flutter pub get
+flutter run
+```
+
+See [Architecture](docs/ARCHITECTURE.md) for module boundaries, repository
+replacement, image-picker limitations, and tests.

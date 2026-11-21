@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 
-/// A non-interactive message for screens without content yet.
+/// A scrollable placeholder with optional navigation actions.
 class EmptyState extends StatelessWidget {
   const EmptyState({
     super.key,
     required this.icon,
     required this.title,
     required this.message,
+    this.actions = const [],
   });
 
   final IconData icon;
   final String title;
   final String message;
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) {
@@ -27,10 +29,13 @@ class EmptyState extends StatelessWidget {
             children: [
               Icon(icon, size: 64, color: theme.colorScheme.primary),
               const SizedBox(height: 24),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.headlineSmall,
+              Semantics(
+                header: true,
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.headlineSmall,
+                ),
               ),
               const SizedBox(height: 12),
               Text(
@@ -38,6 +43,15 @@ class EmptyState extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge,
               ),
+              if (actions.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: actions,
+                ),
+              ],
             ],
           ),
         ),

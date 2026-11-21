@@ -1,8 +1,17 @@
-# wardrobe
+# Wardrobe
 
-Owns garment capture, image-quality feedback, user-confirmed metadata, optional sizes, and wardrobe browsing/management. The presentation layer currently contains only the home placeholder.
+Phase 1 implements manual clothing browsing, category filtering, gallery image
+selection, validated add/edit forms, detail views, and confirmed deletion.
 
-Add presentation/ for screens and UI state, domain/ for pure Dart models and
-business rules, and data/ for repository implementations and data sources as
-real functionality arrives. See [architecture](../../../docs/ARCHITECTURE.md).
+- domain/: immutable ClothingItem, category/season enums, pure filtering, and the
+  asynchronous WardrobeRepository contract.
+- data/: in-memory CRUD and three development samples. All changes reset on app
+  restart; this is not durable storage.
+- presentation/: grid, add/edit form, details, and local-image fallback.
 
+The app shell injects one repository instance. Forms and details share it, and
+the list reloads on return. Future Firebase integration can replace the data
+implementation without importing SDK types into domain/UI. Image-quality checks,
+AI classification, optional sizing, and durable storage remain deferred.
+
+See [architecture](../../../docs/ARCHITECTURE.md) for data flow and limitations.
