@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/local_image_quality_service.dart';
 import '../../domain/clothing_item.dart';
 import '../../domain/clothing_metadata.dart';
 import '../../domain/wardrobe_repository.dart';
@@ -7,16 +8,22 @@ import '../gallery_image_picker.dart';
 import '../widgets/clothing_image.dart';
 import '../widgets/clothing_page_layout.dart';
 
+enum _PhotoQualityChoice { retry, useAnyway, cancel }
+
 class ClothingFormScreen extends StatefulWidget {
   const ClothingFormScreen({
     super.key,
     required this.repository,
     this.item,
     this.pickImage = pickGalleryImage,
+    this.takePhoto = takeCameraPhoto,
+    this.checkImageQuality = checkLocalImageQuality,
   });
   final WardrobeRepository repository;
   final ClothingItem? item;
   final PickClothingImage pickImage;
+  final PickClothingImage takePhoto;
+  final CheckClothingImageQuality checkImageQuality;
 
   @override
   State<ClothingFormScreen> createState() => _ClothingFormScreenState();
@@ -32,6 +39,7 @@ class _ClothingFormScreenState extends State<ClothingFormScreen> {
   ClothingCategory? _category;
   ClothingSeason? _season;
   String? _image;
+  List<ImageQualityIssue> _imageQualityWarnings = const [];
   String? _error;
   bool _saving = false;
   bool _picking = false;
@@ -121,19 +129,101 @@ class _ClothingFormScreenState extends State<ClothingFormScreen> {
     );
   }
 
-  Future<void> _selectImage() async {
+  Future<_PhotoQualityChoice?> _showQualityWarnings(
+    ImageQualityReport report, {
+    required bool fromCamera,
+  }) => showDialog<_PhotoQualityChoice>(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => AlertDialog(
+      scrollable: true,
+      title: const Text('Check photo quality'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('We noticed the following potential issues:'),
+          const SizedBox(height: 8),
+          for (final issue in report.issues)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text('• ${issue.message}'),
+            ),
+          const SizedBox(height: 4),
+          const Text(
+            'These checks are only guidance. You can still use the photo.',
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, _PhotoQualityChoice.cancel),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, _PhotoQualityChoice.retry),
+          child: Text(fromCamera ? 'Retake' : 'Choose another'),
+        ),
+        FilledButton(
+          onPressed: () =>
+              Navigator.pop(context, _PhotoQualityChoice.useAnyway),
+          child: const Text('Use anyway'),
+        ),
+      ],
+    ),
+  );
+
+  Future<void> _selectImage(
+    PickClothingImage picker, {
+    required bool fromCamera,
+  }) async {
     setState(() {
       _picking = true;
       _error = null;
     });
     try {
-      final path = await widget.pickImage();
-      if (mounted && path != null) setState(() => _image = path);
+      while (mounted) {
+        final path = await picker();
+        if (!mounted || path == null) return;
+
+        final ImageQualityReport report;
+        try {
+          report = await widget.checkImageQuality(path);
+        } catch (_) {
+          setState(() {
+            _image = path;
+            _imageQualityWarnings = const [];
+            _error =
+                'Photo selected, but its quality could not be checked locally.';
+          });
+          return;
+        }
+        if (!report.hasWarnings) {
+          setState(() {
+            _image = path;
+            _imageQualityWarnings = const [];
+          });
+          return;
+        }
+
+        final choice = await _showQualityWarnings(
+          report,
+          fromCamera: fromCamera,
+        );
+        if (!mounted || choice == _PhotoQualityChoice.cancel) return;
+        if (choice == _PhotoQualityChoice.retry) continue;
+        setState(() {
+          _image = path;
+          _imageQualityWarnings = report.issues;
+        });
+        return;
+      }
     } catch (_) {
       if (mounted) {
         setState(
-          () => _error =
-              'Could not open the gallery. Check photo access and try again.',
+          () => _error = fromCamera
+              ? 'Could not open the camera. Check camera access and try again.'
+              : 'Could not open the gallery. Check photo access and try again.',
         );
       }
     } finally {
@@ -215,20 +305,69 @@ class _ClothingFormScreenState extends State<ClothingFormScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: busy ? null : _selectImage,
-                  icon: const Icon(Icons.photo_library_outlined),
-                  label: Text(
-                    _picking ? 'Opening gallery…' : 'Choose gallery image',
-                  ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: busy
+                          ? null
+                          : () => _selectImage(
+                              widget.takePhoto,
+                              fromCamera: true,
+                            ),
+                      icon: const Icon(Icons.photo_camera_outlined),
+                      label: const Text('Take photo'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: busy
+                          ? null
+                          : () => _selectImage(
+                              widget.pickImage,
+                              fromCamera: false,
+                            ),
+                      icon: const Icon(Icons.photo_library_outlined),
+                      label: const Text('Choose gallery image'),
+                    ),
+                  ],
                 ),
                 if (_image != null)
                   TextButton(
                     onPressed: busy
                         ? null
-                        : () => setState(() => _image = null),
+                        : () => setState(() {
+                            _image = null;
+                            _imageQualityWarnings = const [];
+                          }),
                     child: const Text('Remove image'),
                   ),
+                if (_imageQualityWarnings.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    key: const ValueKey('photo-quality-warning'),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.tertiaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Photo quality warning',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: 4),
+                        for (final issue in _imageQualityWarnings)
+                          Text('• ${issue.message}'),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'You chose to use this photo anyway. You can replace or retake it at any time.',
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const Text('Photo optional. A plain background works best.'),
                 const SizedBox(height: 16),
                 TextFormField(
